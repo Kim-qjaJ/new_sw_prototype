@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Busan Mate 프로토타입</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <aside class="sidebar" id="sidebar" aria-label="대화 목록">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="6.2" r="4.2"/><circle cx="17.5" cy="10.2" r="4.2"/><circle cx="15.4" cy="16.6" r="4.2"/>
+          <circle cx="8.6" cy="16.6" r="4.2"/><circle cx="6.5" cy="10.2" r="4.2"/><circle class="brand-core" cx="12" cy="12" r="2.6"/>
+        </svg>
+        <span class="brand-name">Busan Mate</span>
+        <span class="brand-tag">프로토타입</span>
+      </div>
+
+      <button class="new-chat" id="newChatBtn" type="button">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12"/></svg>
+        새 대화
+      </button>
+
+      <nav class="history" aria-label="최근 대화">
+        <p class="history-title">최근 대화</p>
+        <ul id="historyList" class="history-list"></ul>
+      </nav>
+
+      <section class="status" id="statusPanel" aria-live="polite">
+        <div class="status-row">
+          <span class="dot" id="llmDot"></span>
+          <span id="llmText">LLM 상태 확인 중</span>
+        </div>
+        <div class="status-row status-mock" id="mockRow" hidden>
+          <span class="dot dot-warn"></span>
+          <span>샘플 장소 데이터 사용 중</span>
+        </div>
+        <ul class="provider-list" id="providerList"></ul>
+      </section>
+    </aside>
+
+    <div class="scrim" id="scrim" hidden></div>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="대화 목록 열기">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+        </button>
+        <h1 class="chat-title" id="chatTitle">새 대화</h1>
+        <label class="switch">
+          <input type="checkbox" id="devToggle">
+          <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+          <span class="switch-label">해석 과정 보기</span>
+        </label>
+      </header>
+
+      <section class="messages" id="messages" aria-live="polite"></section>
+
+      <footer class="composer-wrap">
+        <form class="composer" id="composer">
+          <label for="input" class="sr-only">메시지</label>
+          <textarea id="input" rows="1" placeholder="예: 서면에서 친구랑 갈 카페 추천해줘" maxlength="500"></textarea>
+          <button class="send-btn" id="sendBtn" type="submit" disabled aria-label="보내기">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 16V4M5 9l5-5 5 5"/></svg>
+          </button>
+        </form>
+        <p class="composer-note">문장마다 새로 해석합니다. 이전 대화 내용은 아직 이어지지 않아요.</p>
+      </footer>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

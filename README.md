@@ -4,50 +4,76 @@
 
 ## Prototype goal
 
-1. Local Ollama/Gemma로 자연어 질의를 구조화된 Intent JSON으로 변환
-2. Kakao와 Naver 장소 검색 Provider를 병렬 호출할 수 있는 구조 구성
-3. 부산 공공데이터, 관광, 날씨 Provider를 독립 모듈로 확장
-4. 서로 다른 Provider 결과를 공통 `Place` 모델로 정규화
-5. 중복 장소를 통합하고 자체 RecommendationService로 순위 계산
-6. 각 단계의 처리시간을 측정해 API/LLM 지연시간 비교
+- Local Ollama/Gemma로 자연어 질의를 구조화된 Intent JSON으로 변환
+- Kakao와 Naver 장소 검색 Provider를 병렬 호출할 수 있는 구조 구성
+- 부산 공공데이터, 관광, 날씨 Provider를 독립 모듈로 확장
+- 서로 다른 Provider 결과를 공통 Place 모델로 정규화
+- 중복 장소를 통합하고 자체 RecommendationService로 순위 계산
+- 각 단계의 처리시간을 측정해 API/LLM 지연시간 비교
 
 ## Architecture
 
-```text
-User
-  ↓
+```
+Chat GUI (app/static)
+↓  POST /api/v1/recommend  { "message": "서면에서 친구랑 카페 추천해줘" }
 FastAPI
+↓
+OllamaIntentParser (Gemma, JSON Schema + Pydantic 검증 + 재시도)
+↓  UserIntent (requests[])
+RecommendationPipeline  ── requests마다 병렬 처리
   ↓
-Gemma / Ollama → UserIntent
+  API Router ── Mock / Kakao / Naver / Busan / Tour (Timeout, 상태 기록)
   ↓
-API Router
-  ├─ KakaoProvider
-  ├─ NaverProvider
-  ├─ BusanProvider
-  ├─ TourProvider
-  └─ WeatherProvider
+  PlaceMerger
   ↓
-PlaceNormalizer / PlaceMerger
-  ↓
-RecommendationService
-  ↓
-TOP N Places + timing
+  RecommendationService
+↓
+요청별 TOP N + Provider 상태 + 단계별 처리시간
 ```
 
 ## Current stage
 
-현재는 프로토타입 뼈대 단계입니다. Provider 인터페이스와 추천 모델을 먼저 고정하고 실제 API는 하나씩 연결합니다.
+- 간단한 채팅형 GUI 추가 (로그인 없음, 대화 목록은 브라우저 localStorage에만 저장)
+- 자연어 → Ollama Intent 해석 → 추천 흐름 연결
+- 외부 장소 API는 아직 미연결. `USE_MOCK_PLACES=true`이면 `[샘플]` 장소로 GUI와 점수 흐름을 확인
 
-## Run
+## Run (Mac mini)
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
+
+ollama pull gemma4:e4b      # 처음 한 번
+ollama serve                # Ollama 앱이 이미 실행 중이면 생략
+
 python -m uvicorn app.main:app --reload
 ```
 
-Windows PowerShell에서는 `.venv\\Scripts\\Activate.ps1`을 사용합니다.
+브라우저에서 http://127.0.0.1:8000 을 열면 채팅 화면이 나옵니다.
+같은 네트워크의 다른 기기에서 열려면 `--host 0.0.0.0`을 붙이고 `http://<Mac mini IP>:8000`으로 접속합니다.
+Ollama는 localhost로만 열어두면 됩니다.
+
+Windows PowerShell에서는 `.venv\Scripts\Activate.ps1`을 사용합니다.
 
 API 키가 들어가는 `.env`는 Git에 커밋하지 않습니다.
+
+## Endpoints
+
+| Method | Path | 용도 |
+|---|---|---|
+| GET | `/` | 채팅 GUI |
+| GET | `/api/v1/status` | Ollama 연결, 모델 설치, Provider 키 설정 상태 |
+| POST | `/api/v1/recommend` | 자연어 → Intent → 추천 (GUI가 사용) |
+| POST | `/api/v1/intent` | 자연어 → Intent만 반환 (프롬프트 테스트) |
+| POST | `/api/v1/recommend/intent` | 완성된 Intent → 추천 (LLM 없이 디버깅) |
+
+자세한 요청 형식은 http://127.0.0.1:8000/docs 에서 확인합니다.
+
+## Troubleshooting
+
+- GUI에 "Ollama 연결 안 됨": `ollama serve` 실행 여부와 `OLLAMA_URL`을 확인합니다.
+- "모델 없음": `ollama pull gemma4:e4b` 후 `OLLAMA_MODEL` 값과 태그가 같은지 확인합니다.
+- Intent 호출 시 Ollama가 format 관련 오류를 반환: `.env`에서 `OLLAMA_STRUCTURED_OUTPUT=false`로 바꾸면 일반 JSON 모드로 호출합니다.
+- 첫 요청만 느림: 모델 로딩 시간입니다. 서버 시작 시 백그라운드로 워밍업하고, `OLLAMA_KEEP_ALIVE` 동안 메모리에 유지합니다.

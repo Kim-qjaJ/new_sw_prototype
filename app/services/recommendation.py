@@ -1,5 +1,15 @@
-from app.schemas.intent import UserIntent
+from app.schemas.intent import PlaceRequest, UserIntent
 from app.schemas.place import Place
+
+# GUI에서 막대 길이를 그릴 수 있도록 항목별 최대 점수를 함께 공개한다.
+SCORE_MAX = {
+    "relevance": 30.0,
+    "distance": 25.0,
+    "user_condition": 15.0,
+    "weather": 10.0,
+    "cross_provider": 10.0,
+    "busan_data": 10.0,
+}
 
 
 class RecommendationService:
@@ -8,9 +18,14 @@ class RecommendationService:
     The weights are experimental and should be adjusted after API integration tests.
     """
 
-    def rank(self, intent: UserIntent, places: list[Place], limit: int = 5) -> list[Place]:
+    def rank(
+        self,
+        intent: UserIntent,
+        request: PlaceRequest,
+        places: list[Place],
+        limit: int = 5,
+    ) -> list[Place]:
         ranked: list[Place] = []
-        request = intent.requests[0]
 
         for original in places:
             place = original.model_copy(deep=True)
@@ -22,7 +37,7 @@ class RecommendationService:
                 relevance += 15.0
             if request.category and request.category == place.category:
                 relevance += 15.0
-            breakdown["relevance"] = min(relevance, 30.0)
+            breakdown["relevance"] = min(relevance, SCORE_MAX["relevance"])
 
             # Distance: max 25 (simple prototype buckets)
             if place.distance_m is not None:
@@ -40,7 +55,7 @@ class RecommendationService:
             # Explicit indoor condition: max 15
             if request.indoor is None:
                 breakdown["user_condition"] = 7.5
-            elif place.indoor is request.indoor:
+            elif place.indoor == request.indoor:
                 breakdown["user_condition"] = 15.0
             else:
                 breakdown["user_condition"] = 0.0
