@@ -61,16 +61,18 @@ async def health():
 
 @app.get("/api/v1/status")
 async def status():
+    public_key_ready = bool(settings.public_data_service_key)
     return {
         "llm": await app.state.intent_parser.status(),
         "mock_data": settings.use_mock_places,
         "providers": {
             "kakao": bool(settings.kakao_rest_api_key),
             "naver": bool(settings.naver_client_id and settings.naver_client_secret),
-            "busan": bool(settings.busan_api_key),
-            "tour": bool(settings.tour_api_key),
-            "weather": bool(settings.kma_api_key),
+            "busan": bool(public_key_ready and settings.busan_api_url),
+            "tour": bool(public_key_ready and settings.tour_api_url),
+            "weather": bool(public_key_ready and settings.kma_api_url),
         },
+        "public_data_key_loaded": public_key_ready,
     }
 
 
