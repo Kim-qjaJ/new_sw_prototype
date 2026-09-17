@@ -21,8 +21,12 @@ PlaceCategory = Literal[
     "other",
 ]
 
+TransportMode = Literal["walk", "transit", "car"]
+
 
 class PlaceRequest(BaseModel):
+    """One place/data request extracted from the user's natural language."""
+
     query: str = Field(min_length=1, max_length=200)
     category: PlaceCategory | None = None
     subcategory: str | None = None
@@ -34,10 +38,10 @@ class UserIntent(BaseModel):
     location: str | None = None
     requests: list[PlaceRequest] = Field(default_factory=list)
     companion: Literal["alone", "friend", "family"] | None = None
+    transport_mode: TransportMode | None = None
 
     @model_validator(mode="after")
     def check_requests(self) -> "UserIntent":
-        # 장소와 무관한 문장(인사 등)만 requests 없이 허용한다.
         if self.intent != "unsupported" and not self.requests:
             raise ValueError("requests must contain at least one item")
         return self
