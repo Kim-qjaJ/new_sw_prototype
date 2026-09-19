@@ -3,6 +3,7 @@ import time
 
 from app.config import settings
 from app.providers.base import PlaceProvider, ProviderNotConfigured
+from app.providers.busan import BusanProvider
 from app.providers.kakao import KakaoProvider
 from app.providers.mock import MockProvider
 from app.providers.naver import NaverProvider
@@ -12,19 +13,50 @@ from app.schemas.intent import PlaceRequest
 from app.schemas.place import Place
 
 
+BUSAN_EXHIBIT_KEYWORDS = (
+    "전시공간",
+    "전시장",
+    "갤러리",
+    "미술관",
+    "문화공간",
+    "문화시설",
+    "문화회관",
+    "문화센터",
+    "공연장",
+    "극장",
+    "예술회관",
+    "대관",
+)
+
+
 class APIRouterService:
     def __init__(self) -> None:
         self.providers: list[PlaceProvider] = [
             KakaoProvider(),
             NaverProvider(),
             TourProvider(),
+            BusanProvider(),
         ]
         if settings.use_mock_places:
             self.providers.insert(0, MockProvider())
 
     def select_providers(self, request: PlaceRequest) -> list[PlaceProvider]:
-        # TODO: category/intent에 따라 필요한 Provider만 고르도록 확장한다.
-        return self.providers
+        selected: list[PlaceProvider] = []
+        search_text = " ".join(
+            value
+            for value in (request.query, request.subcategory)
+            if value
+        ).lower()
+
+        for provider in self.providers:
+            if provider.name == "busan":
+                # 현재 부산 Provider에는 '전시공간 목록 서비스'만 실제 연결되어 있다.
+                # 관련 없는 음식점/카페 검색에 전시공간 데이터가 섞이지 않도록 제한한다.
+                if not any(keyword in search_text for keyword in BUSAN_EXHIBIT_KEYWORDS):
+                    continue
+            selected.append(provider)
+
+        return selected
 
     async def search(
         self, request: PlaceRequest, location: str | None
