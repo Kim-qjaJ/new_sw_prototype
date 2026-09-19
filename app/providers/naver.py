@@ -17,7 +17,7 @@ def _clean_title(value: str) -> str:
 
 class NaverProvider(PlaceProvider):
     name = "naver"
-    SEARCH_URL = "https://openapi.naver.com/v1/search/local.json"
+    SEARCH_URL = "https://naverapihub.apigw.ntruss.com/search/v1/local"
 
     async def search(self, request: PlaceRequest, location: str | None = None) -> list[Place]:
         if not settings.naver_client_id or not settings.naver_client_secret:
@@ -25,8 +25,8 @@ class NaverProvider(PlaceProvider):
 
         query = f"{location} {request.query}".strip() if location else request.query
         headers = {
-            "X-Naver-Client-Id": settings.naver_client_id.strip(),
-            "X-Naver-Client-Secret": settings.naver_client_secret.strip(),
+            "X-NCP-APIGW-API-KEY-ID": settings.naver_client_id.strip(),
+            "X-NCP-APIGW-API-KEY": settings.naver_client_secret.strip(),
         }
         params = {"query": query, "display": 5, "start": 1, "sort": "random"}
 
