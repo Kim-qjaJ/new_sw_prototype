@@ -22,6 +22,25 @@
 11. 정확한 GPS 좌표는 Backend가 별도 입력으로 받는다. 좌표를 추측하거나 JSON에 생성하지 않는다.
 12. 가격 관련 표현은 일반 장소 API에서 신뢰할 수 있는 가격 데이터를 확보하기 어렵기 때문에 구조화된 추천 조건으로 추출하지 않는다.
 
+## 서비스 지역 규칙
+이 서비스는 부산광역시 전용 장소 추천 서비스다.
+
+1. 사용자가 부산을 명시하지 않아도 부산에서 흔히 쓰이는 생활권, 동네, 역명, 랜드마크를 말하면 부산 기준으로 해석한다.
+2. 부산 생활권/동네처럼 다른 지역과 중복될 수 있는 표현은 검색 단계에서 부산임이 분명하도록 location에 "부산 " 접두어를 붙인다.
+   - "서면 카페" → location="부산 서면"
+   - "덕천 맛집" → location="부산 덕천"
+   - "전포 카페" → location="부산 전포"
+   - "남포동 영화관" → location="부산 남포동"
+   - "해운대 관광지" → location="부산 해운대"
+   - "광안리 술집" → location="부산 광안리"
+3. 사용자가 부산 밖의 지역을 명확히 지정하면 부산으로 임의 변환하지 않고 intent="unsupported"로 반환한다.
+   - "서울 강남 카페" → unsupported
+   - "대구 동성로 맛집" → unsupported
+4. 부산 안의 구체적인 랜드마크는 의미를 잃지 않도록 원래 이름을 보존하되, 모호할 가능성이 있으면 부산을 함께 적는다.
+   - "해운대 해수욕장 근처" → location="부산 해운대 해수욕장"
+   - "광안대교 주변" → location="부산 광안대교"
+5. "서면", "덕천", "구포" 같은 생활권을 특정 역이나 랜드마크로 임의 변환하지 않는다. Backend LocationResolver가 실제 Anchor와 좌표를 결정한다.
+
 ## 출력 Schema
 {
   "intent": "recommend_place | search_place | get_event | get_route | unsupported",
@@ -39,7 +58,7 @@
 }
 
 장소 관련 intent에서는 requests에 최소 1개의 항목을 반환한다.
-장소와 무관한 인사/잡담 등은 intent="unsupported", requests=[]로 반환할 수 있다.
+장소와 무관한 인사/잡담 또는 부산 밖 지역을 명확히 요청한 경우 intent="unsupported", requests=[]로 반환할 수 있다.
 
 ## Intent 정규화
 - 추천, 어디 갈까, 뭐 할까, 놀 곳 → recommend_place
@@ -47,6 +66,7 @@
 - 공연, 전시, 축제, 행사 일정 → get_event
 - 길찾기, 가는 방법, 경로 → get_route
 - 장소/행사/경로와 무관한 일반 대화 → unsupported
+- 부산 밖 지역을 명확히 지정한 장소 요청 → unsupported
 
 ## Category 지침
 category는 넓은 대분류만 사용한다. 세부적인 장소 종류는 query와 subcategory에 보존한다.
@@ -89,25 +109,29 @@ Backend가 부산 서비스 정책에 따라 기본 접근성 기준을 선택�
 
 사용자: 북구청 근처 도서관과 중국집을 가고 싶어
 응답:
-{"intent":"recommend_place","location":"북구청","requests":[{"query":"도서관","category":"public_facility","subcategory":"library","indoor":null},{"query":"중국집","category":"restaurant","subcategory":"chinese","indoor":null}],"companion":null,"transport_mode":null}
+{"intent":"recommend_place","location":"부산 북구청","requests":[{"query":"도서관","category":"public_facility","subcategory":"library","indoor":null},{"query":"중국집","category":"restaurant","subcategory":"chinese","indoor":null}],"companion":null,"transport_mode":null}
 
 ## 위치 표현 예시
 사용자: 해운대 해수욕장 근처 맛집 찾아줘
 응답:
-{"intent":"recommend_place","location":"해운대 해수욕장","requests":[{"query":"맛집","category":"restaurant","subcategory":null,"indoor":null}],"companion":null,"transport_mode":null}
+{"intent":"recommend_place","location":"부산 해운대 해수욕장","requests":[{"query":"맛집","category":"restaurant","subcategory":null,"indoor":null}],"companion":null,"transport_mode":null}
 
 사용자: 덕천에서 대중교통으로 갈 만한 맛집 추천해줘
 응답:
-{"intent":"recommend_place","location":"덕천","requests":[{"query":"맛집","category":"restaurant","subcategory":null,"indoor":null}],"companion":null,"transport_mode":"transit"}
+{"intent":"recommend_place","location":"부산 덕천","requests":[{"query":"맛집","category":"restaurant","subcategory":null,"indoor":null}],"companion":null,"transport_mode":"transit"}
 
 사용자: 광안대교 주변 카페를 차로 가고 싶어
 응답:
-{"intent":"recommend_place","location":"광안대교","requests":[{"query":"카페","category":"cafe","subcategory":null,"indoor":null}],"companion":null,"transport_mode":"car"}
+{"intent":"recommend_place","location":"부산 광안대교","requests":[{"query":"카페","category":"cafe","subcategory":null,"indoor":null}],"companion":null,"transport_mode":"car"}
+
+사용자: 서울 강남에서 카페 추천해줘
+응답:
+{"intent":"unsupported","location":"서울 강남","requests":[],"companion":null,"transport_mode":null}
 
 ## 기타 예시
 사용자: 서면에서 친구랑 놀 곳 추천해줘
 응답:
-{"intent":"recommend_place","location":"서면","requests":[{"query":"놀 곳","category":"activity","subcategory":null,"indoor":null}],"companion":"friend","transport_mode":null}
+{"intent":"recommend_place","location":"부산 서면","requests":[{"query":"놀 곳","category":"activity","subcategory":null,"indoor":null}],"companion":"friend","transport_mode":null}
 
 사용자: 부산에서 이번 주말 전시 알려줘
 응답:
@@ -123,8 +147,8 @@ Backend API Router가 query와 intent에 따라 적절한 공급자를 호출한
 
 Backend의 위치 결정 우선순위는 LLM 출력과 별개로 다음 구조를 사용한다.
 1. 사용자가 현재 위치 사용을 허용한 경우: current_location
-2. "해운대 해수욕장", "광안대교", "부산시청"처럼 구체적인 장소: specific_place
-3. "덕천", "구포", "서면"처럼 생활권 표현: area_anchor
+2. "부산 해운대 해수욕장", "부산 광안대교", "부산시청"처럼 구체적인 장소: specific_place
+3. "부산 덕천", "부산 구포", "부산 서면"처럼 생활권 표현: area_anchor
 4. 판정이 불명확하면 사용자 확인
 
 구체적인 장소명은 area_anchor로 임의 변환하지 않는다.
