@@ -68,7 +68,6 @@ async def status():
         "providers": {
             "kakao": bool(settings.kakao_rest_api_key),
             "naver": bool(settings.naver_client_id and settings.naver_client_secret),
-            "busan": bool(public_key_ready and settings.busan_api_url),
             "tour": bool(public_key_ready and settings.tour_api_url),
             "weather": bool(public_key_ready and settings.kma_api_url),
         },
