@@ -3,7 +3,6 @@ import time
 
 from app.config import settings
 from app.providers.base import PlaceProvider, ProviderNotConfigured
-from app.providers.busan import BusanProvider
 from app.providers.kakao import KakaoProvider
 from app.providers.mock import MockProvider
 from app.providers.naver import NaverProvider
@@ -18,7 +17,6 @@ class APIRouterService:
         self.providers: list[PlaceProvider] = [
             KakaoProvider(),
             NaverProvider(),
-            BusanProvider(),
             TourProvider(),
         ]
         if settings.use_mock_places:
