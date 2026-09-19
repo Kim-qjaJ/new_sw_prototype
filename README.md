@@ -6,7 +6,7 @@
 
 - Local Ollama/Gemma로 자연어 질의를 구조화된 Intent JSON으로 변환
 - Kakao와 Naver 장소 검색 Provider를 병렬 호출할 수 있는 구조 구성
-- 부산 공공데이터, 관광, 날씨 Provider를 독립 모듈로 확장
+- 한국관광공사 TourAPI와 기상청 API를 공공데이터포털 인증키 하나로 연결
 - 서로 다른 Provider 결과를 공통 Place 모델로 정규화
 - 중복 장소를 통합하고 자체 RecommendationService로 순위 계산
 - 각 단계의 처리시간을 측정해 API/LLM 지연시간 비교
@@ -22,20 +22,45 @@ OllamaIntentParser (Gemma, JSON Schema + Pydantic 검증 + 재시도)
 ↓  UserIntent (requests[])
 RecommendationPipeline  ── requests마다 병렬 처리
   ↓
-  API Router ── Mock / Kakao / Naver / Busan / Tour (Timeout, 상태 기록)
+  API Router ── Mock / Kakao / Naver / Tour (Timeout, 상태 기록)
   ↓
   PlaceMerger
   ↓
   RecommendationService
 ↓
 요청별 TOP N + Provider 상태 + 단계별 처리시간
+
+WeatherProvider
+└─ PUBLIC_DATA_API_KEY + KMA_API_URL
 ```
+
+## API environment variables
+
+실제 키는 `.env`에만 넣고 Git에는 커밋하지 않습니다.
+
+```env
+KAKAO_REST_API_KEY=
+
+NAVER_CLIENT_ID=
+NAVER_CLIENT_SECRET=
+
+# TourAPI와 기상청이 공통으로 사용하는 공공데이터포털 인증키
+PUBLIC_DATA_API_KEY=
+
+TOUR_API_URL=
+KMA_API_URL=
+```
+
+`PUBLIC_DATA_API_KEY`는 공공데이터포털에서 발급받은 일반 인증키 하나만 입력합니다.
+TourAPI와 기상청 API는 같은 인증키를 사용하되, 서로 다른 Endpoint인 `TOUR_API_URL`과 `KMA_API_URL`로 구분합니다.
 
 ## Current stage
 
 - 간단한 채팅형 GUI 추가 (로그인 없음, 대화 목록은 브라우저 localStorage에만 저장)
 - 자연어 → Ollama Intent 해석 → 추천 흐름 연결
-- 외부 장소 API는 아직 미연결. `USE_MOCK_PLACES=true`이면 `[샘플]` 장소로 GUI와 점수 흐름을 확인
+- Kakao/Naver 실제 장소 검색 Provider 연결
+- TourAPI/기상청은 인증키와 URL 설정 구조까지 준비되어 있으며, 실제 API별 요청 파라미터/응답 필드 매핑은 연결 작업이 남아 있음
+- `USE_MOCK_PLACES=true`이면 `[샘플]` 장소로 GUI와 점수 흐름을 확인 가능
 
 ## Run (Mac mini)
 
